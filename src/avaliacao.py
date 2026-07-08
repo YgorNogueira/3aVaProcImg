@@ -1,19 +1,19 @@
 import os
 import cv2
-import numpy as np
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 from classificacao import treinar_knn, classificar_superficie_knn
 
 
 def avaliar_dataset(caminho_dataset):
-    knn, media, desvio = treinar_knn(caminho_dataset, k=3)
+    knn, scaler = treinar_knn(caminho_dataset, k=3)
 
-    total = 0
-    acertos = 0
+    y_real = []
+    y_pred = []
 
     classes = {
-        "normal": "SUPERFICIE NORMAL",
-        "defeito": "SUPERFICIE COM DEFEITO"
+        "normal": 0,
+        "defeito": 1
     }
 
     for pasta, esperado in classes.items():
@@ -29,18 +29,25 @@ def avaliar_dataset(caminho_dataset):
             if imagem is None:
                 continue
 
-            obtido, _ = classificar_superficie_knn(imagem, knn, media, desvio, k=3)
+            resultado, confianca = classificar_superficie_knn(imagem, knn, scaler)
 
-            total += 1
+            previsto = 1 if resultado == "SUPERFICIE COM DEFEITO" else 0
 
-            if obtido == esperado:
-                acertos += 1
+            y_real.append(esperado)
+            y_pred.append(previsto)
 
-            print(f"{arquivo} | Esperado: {esperado} | Obtido: {obtido}")
+            print(f"{arquivo} | Esperado: {esperado} | Previsto: {previsto} | Confiança: {confianca:.2f}%")
 
-    taxa = (acertos / total) * 100 if total > 0 else 0
+    acc = accuracy_score(y_real, y_pred)
+    prec = precision_score(y_real, y_pred, zero_division=0)
+    rec = recall_score(y_real, y_pred, zero_division=0)
+    f1 = f1_score(y_real, y_pred, zero_division=0)
+    matriz = confusion_matrix(y_real, y_pred)
 
-    print("\n===== AVALIACAO K-NN =====")
-    print(f"Total de imagens: {total}")
-    print(f"Acertos: {acertos}")
-    print(f"Taxa de acerto: {taxa:.2f}%")
+    print("\n===== AVALIACAO K-NN COM LBP =====")
+    print(f"Acurácia: {acc * 100:.2f}%")
+    print(f"Precisão: {prec * 100:.2f}%")
+    print(f"Recall: {rec * 100:.2f}%")
+    print(f"F1-score: {f1 * 100:.2f}%")
+    print("\nMatriz de confusão:")
+    print(matriz)
